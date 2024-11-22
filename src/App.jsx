@@ -1,12 +1,66 @@
 import React, { useState, useEffect } from "react";
 import Quiz from "./pages/QuizPage";
+import styled from "styled-components";
 
+const AppContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #1e1e2f;
+  color: white;
+  font-family: "Arial", sans-serif;
+`;
+
+const Title = styled.h1`
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: #ff6f61;
+`;
+const ButtonContainer = styled.div`
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 1rem;
+`;
+
+const GameOverContainer = styled.div`
+  text-align: center;
+`;
+
+const ScoreText = styled.p`
+  font-size: 1.5rem;
+  margin-top: 1rem;
+  font-weight: bold;
+`;
+
+const Button = styled.button`
+  background: #ff6f61;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  margin-top: 1rem;
+  font-size: 1rem;
+  font-weight: bold;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s;
+
+  &:hover {
+    background: #ff877a;
+  }
+`;
 const App = () => {
   const [token, setToken] = useState("");
   const [quizData, setQuizData] = useState([]);
   const [currentQuizIndex, setCurrentQuizIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [isGameOver, setIsGameOver] = useState(false);
+  const [isGameStarted, setIsGameStarted] = useState(false);
+  const [selectedQuizCount, setSelectedQuizCount] = useState(0);
+  const [isMusicStarted, setIsMusicStarted] = useState(false); // Music Start 상태
 
   const getAccessToken = async () => {
     const clientId = process.env.REACT_APP_SPOTIFY_CLIENT_ID;
@@ -26,12 +80,12 @@ const App = () => {
   };
 
   const fetchQuizData = async () => {
-    const playlistId = "37i9dQZF1DXcBWIGoYBM5M"; // K-POP Daebak (Spotify 공식 ID)
+    const playlistId = "4cBAqN08C5Vg3ZGSFMVnr8"; // 내 플레이리스트 ID
     const response = await fetch(
       `https://api.spotify.com/v1/playlists/${playlistId}`,
       {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${token}`, // 액세스 토큰 사용
         },
       }
     );
@@ -62,22 +116,22 @@ const App = () => {
       })
     );
 
-    // K-POP 장르가 포함된 곡만 필터링
-    const kpopTracks = tracks
-      .filter((track) => track.genres.includes("k-pop")) // K-POP 장르 포함 여부 확인
+    const playableTracks = tracks
       .filter((track) => track.previewUrl) // 미리듣기 URL이 있는 곡만 사용
       .sort(() => 0.5 - Math.random()) // 랜덤 정렬
-      .slice(0, 10); // 상위 10개 선택
+      .slice(0, selectedQuizCount); // 사용자가 선택한 문제 개수만큼 설정
 
-    setQuizData(kpopTracks); // Quiz 데이터로 설정
+    setQuizData(playableTracks); // Quiz 데이터로 설정
   };
   useEffect(() => {
     getAccessToken(); // Access Token 가져오기
   }, []);
 
   useEffect(() => {
-    if (token) fetchQuizData(); // Quiz 데이터 가져오기
-  }, [token]);
+    if (token && selectedQuizCount > 0) {
+      fetchQuizData(); // Quiz 데이터 가져오기
+    }
+  }, [token, selectedQuizCount]);
 
   const handleAnswer = (isCorrect) => {
     if (isCorrect) {
@@ -91,22 +145,47 @@ const App = () => {
     }
   };
 
+  const handleQuizCountSelection = (count) => {
+    setSelectedQuizCount(count);
+    setIsGameStarted(true); // 문제 개수 선택 후 게임 시작
+  };
+
+  const handleMusicStart = () => {
+    setIsMusicStarted(true); // "Music Start" 버튼 클릭 후 게임 시작
+  };
+
   return (
-    <div>
-      <h1>K-POP 노래 맞추기</h1>
-      {isGameOver ? (
+    <AppContainer>
+      <Title>K-POP 노래 맞추기</Title>
+      {!isGameStarted ? (
         <div>
-          <h2>게임 종료!</h2>
-          <p>
-            점수: {score} / {quizData.length}
-          </p>
+          <Title>몇 문제를 풀고 싶나요?</Title>
+          <ButtonContainer>
+            {[10, 20, 30, 40, 50].map((count) => (
+              <Button
+                key={count}
+                onClick={() => handleQuizCountSelection(count)}
+              >
+                {count}문제
+              </Button>
+            ))}
+          </ButtonContainer>
         </div>
+      ) : !isMusicStarted ? (
+        <Button onClick={handleMusicStart}>Music Start</Button>
+      ) : isGameOver ? (
+        <GameOverContainer>
+          <h2>게임 종료!</h2>
+          <ScoreText>
+            점수: {score} / {quizData.length}
+          </ScoreText>
+        </GameOverContainer>
       ) : quizData.length > 0 ? (
         <Quiz quiz={quizData[currentQuizIndex]} onAnswer={handleAnswer} />
       ) : (
         <p>Loading...</p>
       )}
-    </div>
+    </AppContainer>
   );
 };
 
