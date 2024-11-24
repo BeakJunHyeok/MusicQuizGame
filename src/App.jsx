@@ -14,8 +14,11 @@ const AppContainer = styled.div`
 `;
 
 const Title = styled.h1`
-  font-size: 2.5rem;
-  margin-bottom: 1rem;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 48px;
   color: #ff6f61;
 `;
 const ButtonContainer = styled.div`
@@ -37,7 +40,7 @@ const ScoreText = styled.p`
 `;
 
 const Button = styled.button`
-  background: #ff6f61;
+  background: #007bff;
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -58,9 +61,7 @@ const App = () => {
   const [currentQuizIndex, setCurrentQuizIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [isGameOver, setIsGameOver] = useState(false);
-  const [isGameStarted, setIsGameStarted] = useState(false);
   const [selectedQuizCount, setSelectedQuizCount] = useState(0);
-  const [isMusicStarted, setIsMusicStarted] = useState(false); // Music Start 상태
 
   const getAccessToken = async () => {
     const clientId = process.env.REACT_APP_SPOTIFY_CLIENT_ID;
@@ -121,8 +122,13 @@ const App = () => {
       .sort(() => 0.5 - Math.random()) // 랜덤 정렬
       .slice(0, selectedQuizCount); // 사용자가 선택한 문제 개수만큼 설정
 
+    console.log(
+      "Fetched Quiz Data (Song Titles):",
+      playableTracks.map((track) => track.name)
+    ); // 노래 제목 배열 출력
     setQuizData(playableTracks); // Quiz 데이터로 설정
   };
+
   useEffect(() => {
     getAccessToken(); // Access Token 가져오기
   }, []);
@@ -147,17 +153,12 @@ const App = () => {
 
   const handleQuizCountSelection = (count) => {
     setSelectedQuizCount(count);
-    setIsGameStarted(true); // 문제 개수 선택 후 게임 시작
-  };
-
-  const handleMusicStart = () => {
-    setIsMusicStarted(true); // "Music Start" 버튼 클릭 후 게임 시작
   };
 
   return (
     <AppContainer>
       <Title>K-POP 노래 맞추기</Title>
-      {!isGameStarted ? (
+      {!selectedQuizCount ? (
         <div>
           <Title>몇 문제를 풀고 싶나요?</Title>
           <ButtonContainer>
@@ -171,8 +172,6 @@ const App = () => {
             ))}
           </ButtonContainer>
         </div>
-      ) : !isMusicStarted ? (
-        <Button onClick={handleMusicStart}>Music Start</Button>
       ) : isGameOver ? (
         <GameOverContainer>
           <h2>게임 종료!</h2>
@@ -181,7 +180,12 @@ const App = () => {
           </ScoreText>
         </GameOverContainer>
       ) : quizData.length > 0 ? (
-        <Quiz quiz={quizData[currentQuizIndex]} onAnswer={handleAnswer} />
+        <Quiz
+          quiz={quizData[currentQuizIndex]}
+          currentQuizIndex={currentQuizIndex + 1}
+          totalQuizzes={quizData.length}
+          onAnswer={handleAnswer}
+        />
       ) : (
         <p>Loading...</p>
       )}
