@@ -3,6 +3,7 @@ import Quiz from "./pages/QuizPage";
 import styled from "styled-components";
 
 const AppContainer = styled.div`
+  overflow-y: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -11,6 +12,10 @@ const AppContainer = styled.div`
   background-color: #1e1e2f;
   color: white;
   font-family: "Arial", sans-serif;
+  @media (max-width: 430px) {
+    width: 100%;
+    height: 100vh;
+  }
 `;
 
 const Title = styled.h1`
@@ -20,7 +25,11 @@ const Title = styled.h1`
   align-items: center;
   font-size: 48px;
   color: #ff6f61;
+  @media (max-width: 430px) {
+    font-size: 32px;
+  }
 `;
+
 const ButtonContainer = styled.div`
   display: flex;
   gap: 1rem;
@@ -50,11 +59,14 @@ const Button = styled.button`
   border-radius: 5px;
   cursor: pointer;
   transition: background 0.3s;
-
   &:hover {
     background: #ff877a;
   }
+  @media (max-width: 430px) {
+    padding: 18px;
+  }
 `;
+
 const App = () => {
   const [token, setToken] = useState("");
   const [quizData, setQuizData] = useState([]);
@@ -81,21 +93,35 @@ const App = () => {
   };
 
   const fetchQuizData = async () => {
-    const playlistId = "4cBAqN08C5Vg3ZGSFMVnr8"; // 내 플레이리스트 ID
-    const response = await fetch(
-      `https://api.spotify.com/v1/playlists/${playlistId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`, // 액세스 토큰 사용
-        },
-      }
-    );
+    const playlistId = "4cBAqN08C5Vg3ZGSFMVnr8"; // 플레이리스트 ID
+    const tracks = [];
+    let offset = 0;
+    const limit = 100;
 
-    const data = await response.json();
+    // 전체 트랙 가져오기
+    while (true) {
+      const response = await fetch(
+        `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=${limit}&offset=${offset}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-    // 각 곡의 아티스트 정보 가져오기
-    const tracks = await Promise.all(
-      data.tracks.items.map(async (item) => {
+      const data = await response.json();
+      tracks.push(...data.items);
+
+      if (data.items.length < limit) break; // 더 이상 가져올 트랙이 없으면 중단
+      offset += limit; // 다음 요청의 시작점 설정
+    }
+
+    // 아티스트 정보 가져오기 및 랜덤 선택
+    const shuffledTracks = tracks.sort(() => 0.5 - Math.random()); // 전체 트랙을 랜덤 정렬
+    const selectedTracks = shuffledTracks.slice(0, selectedQuizCount); // 문제 개수만큼 선택
+
+    const trackDetails = await Promise.all(
+      selectedTracks.map(async (item) => {
         const artistId = item.track.artists[0].id;
         const artistResponse = await fetch(
           `https://api.spotify.com/v1/artists/${artistId}`,
@@ -112,20 +138,13 @@ const App = () => {
           name: item.track.name,
           artist: item.track.artists[0].name,
           previewUrl: item.track.preview_url,
-          genres: artistData.genres || [], // 아티스트의 장르 정보
+          genres: artistData.genres || [],
         };
       })
     );
 
-    const playableTracks = tracks
-      .filter((track) => track.previewUrl) // 미리듣기 URL이 있는 곡만 사용
-      .sort(() => 0.5 - Math.random()) // 랜덤 정렬
-      .slice(0, selectedQuizCount); // 사용자가 선택한 문제 개수만큼 설정
+    const playableTracks = trackDetails.filter((track) => track.previewUrl); // 미리듣기 URL이 있는 곡만 사용
 
-    console.log(
-      "Fetched Quiz Data (Song Titles):",
-      playableTracks.map((track) => track.name)
-    ); // 노래 제목 배열 출력
     setQuizData(playableTracks); // Quiz 데이터로 설정
   };
 
@@ -155,6 +174,13 @@ const App = () => {
     setSelectedQuizCount(count);
   };
 
+  const resetGame = () => {
+    setSelectedQuizCount(0);
+    setScore(0);
+    setCurrentQuizIndex(0);
+    setIsGameOver(false);
+    setQuizData([]);
+  };
   return (
     <AppContainer>
       <Title>K-POP 노래 맞추기</Title>
@@ -175,6 +201,7 @@ const App = () => {
       ) : isGameOver ? (
         <GameOverContainer>
           <h2>게임 종료!</h2>
+          <Button onClick={resetGame}>홈으로</Button>
           <ScoreText>
             점수: {score} / {quizData.length}
           </ScoreText>

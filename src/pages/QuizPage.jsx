@@ -52,6 +52,9 @@ const Contents = styled.div`
   width: 100%;
   justify-content: center;
   align-items: center;
+  @media (max-width: 430px) {
+    width: 100%;
+  }
 `;
 
 const Input = styled.input`
@@ -64,6 +67,9 @@ const Input = styled.input`
   &:focus {
     outline: none;
   }
+  @media (max-width: 430px) {
+    width: 240px;
+  }
 `;
 
 const Buttons = styled.div`
@@ -71,6 +77,9 @@ const Buttons = styled.div`
   display: flex;
   gap: 16px;
   margin-top: 4px;
+  @media (max-width: 430px) {
+    width: 100%;
+  }
 `;
 
 const SubmitButton = styled.button`
@@ -109,7 +118,11 @@ const Volume = styled.div`
   align-items: center;
   gap: 10px;
   margin-left: 20px;
+  @media (max-width: 430px) {
+    display: none;
+  }
 `;
+
 const Icon = styled.img`
   width: 28px;
   object-fit: cover;
@@ -149,7 +162,7 @@ const Quiz = ({ quiz, onAnswer, currentQuizIndex, totalQuizzes }) => {
   const [showAnswer, setShowAnswer] = useState(false); // 정답 표시 상태
   const [feedback, setFeedback] = useState(null); // 정답/오답 메시지 상태
   const [gameStarted, setGameStarted] = useState(false); // 게임 시작 여부
-  const [timeLeft, setTimeLeft] = useState(20); // 노래 남은 시간
+  const [timeLeft, setTimeLeft] = useState(10); // 노래 남은 시간
   const [isPaused, setIsPaused] = useState(false); // 중지 상태
   const [volume, setVolume] = useState(0.3); // 초기 볼륨 (1 = 100%)
   const [isVolumeVisible, setIsVolumeVisible] = useState(false);
@@ -163,11 +176,11 @@ const Quiz = ({ quiz, onAnswer, currentQuizIndex, totalQuizzes }) => {
 
     return () => {
       if (audioRef.current) {
-        audioRef.current.pause(); // 컴포넌트 언마운트 시 음악 중지
+        audioRef.current.pause();
         audioRef.current = null;
       }
       if (timerRef.current) {
-        clearInterval(timerRef.current); // 타이머 정리
+        clearInterval(timerRef.current);
       }
     };
   }, [quiz, gameStarted]);
@@ -210,13 +223,6 @@ const Quiz = ({ quiz, onAnswer, currentQuizIndex, totalQuizzes }) => {
     const answerToEnglish =
       reversedMapping[normalizedAnswer] || normalizedAnswer; // 정답 -> 영어 변환
 
-    console.log("Normalized Input:", normalizedInput);
-    console.log("Normalized Answer:", normalizedAnswer);
-    console.log("Input Mapped to Korean:", inputToKorean);
-    console.log("Answer Mapped to Korean:", answerToKorean);
-    console.log("Input Mapped to English:", inputToEnglish);
-    console.log("Answer Mapped to English:", answerToEnglish);
-
     return (
       inputToKorean === answerToKorean || // 매핑된 한글 값 비교
       normalizedInput === normalizedAnswer || // 정규화된 원본 값 비교
@@ -226,11 +232,15 @@ const Quiz = ({ quiz, onAnswer, currentQuizIndex, totalQuizzes }) => {
   };
 
   const startTimer = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current); // 기존 타이머 제거
+    }
+
     timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timerRef.current); // 타이머 정리
-          handleSkip(); // 시간 초과 시 스킵 처리
+          handleSkip(); // 시간 초과 처리
           return 0;
         }
         return prev - 1;
@@ -241,16 +251,23 @@ const Quiz = ({ quiz, onAnswer, currentQuizIndex, totalQuizzes }) => {
   const handlePlayAudio = () => {
     if (audioRef.current) {
       audioRef.current.pause(); // 이전 음악 중지
+      audioRef.current = null; // 기존 오디오 객체 초기화
+    }
+
+    if (timerRef.current) {
+      clearInterval(timerRef.current); // 기존 타이머 정리
     }
 
     // 새로운 음악 재생
     const audio = new Audio(quiz.previewUrl);
-    audioRef.current = audio; // 현재 오디오 객체 저장
-    audio.volume = 0.3;
-    // audio.volume = volume; // 초기 볼륨 설정
-    audio.play().catch((error) => console.error("Audio play failed:", error));
+    audioRef.current = audio;
+    audio.volume = volume;
+    audio
+      .play()
+      .then(() => setIsPaused(false))
+      .catch((error) => console.error("Audio play failed:", error));
 
-    setTimeLeft(20); // 남은 시간 초기화
+    setTimeLeft(10); // 남은 시간 초기화
     startTimer(); // 타이머 시작
   };
 
@@ -259,12 +276,12 @@ const Quiz = ({ quiz, onAnswer, currentQuizIndex, totalQuizzes }) => {
       // 재개
       setIsPaused(false);
       audioRef.current?.play();
-      startTimer();
+      startTimer(); // 타이머 재시작
     } else {
       // 중지
       setIsPaused(true);
       audioRef.current?.pause();
-      clearInterval(timerRef.current);
+      clearInterval(timerRef.current); // 타이머 중지
     }
   };
 
@@ -290,8 +307,9 @@ const Quiz = ({ quiz, onAnswer, currentQuizIndex, totalQuizzes }) => {
       setFeedback(null);
       setUserAnswer("");
       setShowAnswer(false);
+      setIsPaused(false);
       onAnswer(isCorrect);
-    }, 2000);
+    }, 1000);
   };
 
   const handleSkip = () => {
@@ -300,19 +318,20 @@ const Quiz = ({ quiz, onAnswer, currentQuizIndex, totalQuizzes }) => {
 
     // 음악과 타이머 정리
     if (audioRef.current) {
-      audioRef.current.pause(); // 현재 음악 중지
+      audioRef.current.pause();
       audioRef.current = null;
     }
     if (timerRef.current) {
-      clearInterval(timerRef.current); // 타이머 정리
+      clearInterval(timerRef.current);
     }
 
     setTimeout(() => {
       setFeedback(null);
       setUserAnswer("");
       setShowAnswer(false);
-      onAnswer(false); // 스킵은 무조건 오답 처리
-    }, 2000);
+      setIsPaused(false);
+      onAnswer(false);
+    }, 1000);
   };
 
   return (
@@ -328,7 +347,7 @@ const Quiz = ({ quiz, onAnswer, currentQuizIndex, totalQuizzes }) => {
           </QuizStatus>
           {!feedback && (
             <CircularProgressContainer>
-              <CircularProgressBar progress={(timeLeft / 20) * 100}>
+              <CircularProgressBar progress={(timeLeft / 10) * 100}>
                 <PlayPauseButton
                   src={isPaused ? "/img/play.png" : "/img/pause.png"}
                   alt="Play/Pause"
