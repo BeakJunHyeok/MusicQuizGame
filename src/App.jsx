@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Quiz from "./pages/QuizPage";
 import styled from "styled-components";
-
+import SpotifyAuth from "./SpotifyAuth";
 const AppContainer = styled.div`
   overflow-y: hidden;
   display: flex;
@@ -110,42 +110,38 @@ const App = () => {
       );
 
       const data = await response.json();
+
+      if (!data.items || data.items.length === 0) {
+        console.error("No items in playlist response:", data);
+        break; // 더 이상 가져올 트랙이 없으면 중단
+      }
+
       tracks.push(...data.items);
 
       if (data.items.length < limit) break; // 더 이상 가져올 트랙이 없으면 중단
       offset += limit; // 다음 요청의 시작점 설정
     }
 
-    // 아티스트 정보 가져오기 및 랜덤 선택
+    // console.log("Fetched Tracks:", tracks);
+
+    // 랜덤 선택
     const shuffledTracks = tracks.sort(() => 0.5 - Math.random()); // 전체 트랙을 랜덤 정렬
     const selectedTracks = shuffledTracks.slice(0, selectedQuizCount); // 문제 개수만큼 선택
 
-    const trackDetails = await Promise.all(
-      selectedTracks.map(async (item) => {
-        const artistId = item.track.artists[0].id;
-        const artistResponse = await fetch(
-          `https://api.spotify.com/v1/artists/${artistId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        const artistData = await artistResponse.json();
+    // 아티스트 정보와 곡 정보 가져오기
+    const trackDetails = selectedTracks.map((item) => ({
+      id: item.track.id,
+      name: item.track.name,
+      artist: item.track.artists[0]?.name || "Unknown Artist",
+    }));
 
-        return {
-          id: item.track.id,
-          name: item.track.name,
-          artist: item.track.artists[0].name,
-          previewUrl: item.track.preview_url,
-          genres: artistData.genres || [],
-        };
-      })
-    );
+    // console.log(
+    //   "Fetched Song Titles for Quiz:",
+    //   trackDetails.map((track) => `${track.name}`)
+    // ); // 디버깅용 출력
 
-    const playableTracks = trackDetails.filter((track) => track.previewUrl); // 미리듣기 URL이 있는 곡만 사용
-
-    setQuizData(playableTracks); // Quiz 데이터로 설정
+    // Quiz 데이터 설정
+    setQuizData(trackDetails);
   };
 
   useEffect(() => {
@@ -181,6 +177,7 @@ const App = () => {
     setIsGameOver(false);
     setQuizData([]);
   };
+
   return (
     <AppContainer>
       <Title>K-POP 노래 맞추기</Title>

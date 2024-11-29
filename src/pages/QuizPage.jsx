@@ -96,7 +96,21 @@ const SubmitButton = styled.button`
     background: #ff877a;
   }
 `;
-
+const StartButton = styled.button`
+  background: #ff6f61;
+  color: white;
+  border: none;
+  padding: 16px 24px;
+  font-size: 18px;
+  font-weight: bold;
+  border-radius: 8px;
+  margin: 0 auto;
+  cursor: pointer;
+  transition: background 0.3s;
+  &:hover {
+    background: #ff877a;
+  }
+`;
 const SkipButton = styled.button`
   background: #007bff;
   color: white;
@@ -149,12 +163,28 @@ const QuizStatus = styled.div`
 `;
 
 const Answer = styled.div`
-  font-size: 24px;
+  font-size: 22px;
   font-weight: bold;
-  text-align: center;
+  width: 100%;
+`;
+
+const StartArea = styled.div`
   display: flex;
-  justify-content: center;
-  align-items: center;
+  flex-direction: column;
+  height: 100%;
+`;
+
+const DescText = styled.p`
+  font-size: 18px;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  background: #007bff;
+  padding: 30px;
+  @media (max-width: 430px) {
+    padding: 20px 10px;
+    font-size: 16px;
+  }
 `;
 
 const Quiz = ({ quiz, onAnswer, currentQuizIndex, totalQuizzes }) => {
@@ -337,9 +367,15 @@ const Quiz = ({ quiz, onAnswer, currentQuizIndex, totalQuizzes }) => {
   return (
     <div>
       {!gameStarted ? (
-        <SubmitButton onClick={() => setGameStarted(true)}>
-          Music Start
-        </SubmitButton>
+        <StartArea>
+          <DescText>
+            정답처리 방식 예시 <br />
+            문제의답: Sign 정답처리: sign, SIGN, 사인
+          </DescText>
+          <StartButton onClick={() => setGameStarted(true)}>
+            Music Start
+          </StartButton>
+        </StartArea>
       ) : (
         <div>
           <QuizStatus>
@@ -363,7 +399,9 @@ const Quiz = ({ quiz, onAnswer, currentQuizIndex, totalQuizzes }) => {
                 {feedback}
               </FeedbackText>
               <Answer>
-                정답: <strong>{quiz.name}</strong>
+                정답 : {quiz.name}
+                <br />
+                가수 : {quiz.artist}
               </Answer>
             </>
           ) : (
